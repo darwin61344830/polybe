@@ -2,84 +2,66 @@
 
 #include <iostream>
 #include <QString>
-#include <QMap>
 #include <QTextStream>
 
-QMap<QChar, QString> createPolybeGridWithKey(const QString& key) {
-    QMap<QChar, QString> polybeGrid;
-    QString alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    QString keyUpperCase = key.toUpper();
-    int row = 1;
-    int col = 1;
-
-    for (QChar letter : keyUpperCase) {
-        if (letter.isLetter() && !polybeGrid.contains(letter)) {
-            polybeGrid[letter] = QString::number(row) + QString::number(col);
-            col++;
-            if (col > 5) {
-                col = 1;
-                row++;
-            }
-        }
-    }
-
-    for (QChar letter : alphabet) {
-        if (!polybeGrid.contains(letter)) {
-            polybeGrid[letter] = QString::number(row) + QString::number(col);
-            col++;
-            if (col > 5) {
-                col = 1;
-                row++;
-            }
-        }
-    }
-
-    return polybeGrid;
+int modInverse(int a, int m) {
+    a = a % m;
+    for (int x = 1; x < m; x++)
+        if ((a * x) % m == 1)
+            return x;
+    return 1;
 }
 
-QString polybeEncrypt(const QString& message, const QMap<QChar, QString>& polybeGrid) {
+QString affineEncrypt(const QString& message, int a, int b, int m) {
     QString encryptedMessage;
 
     for (QChar letter : message) {
         if (letter.isLetter()) {
-            QChar base = letter.isUpper() ? 'A' : 'a';
-            encryptedMessage += polybeGrid.value(letter.toUpper(), "") + " ";
+            int base = letter.isUpper() ? 'A' : 'a';
+            char encryptedChar = ((a * (letter.toLatin1() - base) + b) % m) + base;
+            encryptedMessage += encryptedChar;
         } else if (letter == ' ') {
 
-            encryptedMessage += "0";
+            encryptedMessage += ' ';
         }
     }
 
-    return encryptedMessage.trimmed();
+    return encryptedMessage;
 }
 
-
-QString polybeDecrypt(const QString& encryptedMessage, const QMap<QChar, QString>& polybeGrid) {
+QString affineDecrypt(const QString& encryptedMessage, int a, int b, int m) {
+    int aInverse = modInverse(a, m);
     QString decryptedMessage;
-    QStringList pairs = encryptedMessage.split(' ', QString::SkipEmptyParts);
 
-    for (const QString& pair : pairs) {
-        if (pair == "0") {
+    for (QChar letter : encryptedMessage) {
+        if (letter.isLetter()) {
+            int base = letter.isUpper() ? 'A' : 'a';
+            char decryptedChar = ((aInverse * (letter.toLatin1() - base - b + m)) % m) + base;
+            decryptedMessage += decryptedChar;
+        } else if (letter == ' ') {
 
-            decryptedMessage += " ";
-        } else {
-            for (auto it = polybeGrid.begin(); it != polybeGrid.end(); ++it) {
-                if (it.value() == pair) {
-                    decryptedMessage += it.key();
-                    break;
-                }
-            }
+            decryptedMessage += ' ';
         }
     }
 
     return decryptedMessage;
 }
-
-
-
+bool areCoprime(int a, int b) {
+    while (b != 0) {
+        int temp = b;
+        b = a % b;
+        a = temp;
+    }
+    return a == 1;
+}
 int main() {
+
     int choix;
-    QString key;
+    QTextStream inputStream(stdin);
+    std::cout << "Entrez le message a chiffrer : ";
+    QString messageToEncrypt = inputStream.readLine();
+
+    int a, b, m;
 
     do {
         do {
@@ -89,34 +71,60 @@ int main() {
         } while (choix < 1 || choix > 3);
 
         if (choix == 1) {
+
             QTextStream inputStream(stdin);
             std::cout << "Entrez le message a chiffrer : ";
             QString messageToEncrypt = inputStream.readLine();
 
-            std::cout << "Entrez la cle de chiffrement : ";
-            inputStream >> key;
+            do {
+                std::cout << "Entrez la valeur de a (doit etre premier avec 26) : ";
+                std::cin >> a;
+            } while (!areCoprime(a, 26));
 
-            QMap<QChar, QString> polybeGrid = createPolybeGridWithKey(key);
+            std::cout << "Entrez le decalage : ";
+            std::cin >> b;
 
-            QString encryptedMessage = polybeEncrypt(messageToEncrypt, polybeGrid);
-            std::cout << "Message chiffre : " << encryptedMessage.toStdString() << std::endl << std::endl;
+            m = 26;
+
+
+            QString encryptedMessage = affineEncrypt(messageToEncrypt, a, b, m);
+            std::cout << "Message chiffre : " << encryptedMessage.toStdString() << std::endl;
 
         } else if (choix == 2) {
             QTextStream inputStream(stdin);
             std::cout << "Entrez le message a déchiffrer : ";
             QString messageToDecrypt = inputStream.readLine();
 
-            std::cout << "Entrez la cle de chiffrement : ";
-            inputStream >> key;
+            do {
+                std::cout << "Entrez la valeur de a (doit etre premier avec 26) : ";
+                std::cin >> a;
+            } while (!areCoprime(a, 26));
 
-            QMap<QChar, QString> polybeGrid = createPolybeGridWithKey(key);
+            std::cout << "Entrez le decalage : ";
+            std::cin >> b;
 
-            QString decryptedMessage = polybeDecrypt(messageToDecrypt, polybeGrid);
-            std::cout << "Message déchiffre : " << decryptedMessage.toStdString() << std::endl << std::endl;
+            m = 26;
+            QString decryptedMessage = affineDecrypt(encryptedMessage, a, b, m);
+            std::cout << "Message déchiffre'' : " << decryptedMessage.toStdString() << std::endl;
+
         }
 
     } while (choix != 3);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     return 0;
 }
-
